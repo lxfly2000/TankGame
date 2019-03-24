@@ -56,11 +56,15 @@ void CTank::Draw(IplImage *dst)
 float CTank::CalcDir(int to_X, int to_Y)
 {
 	if (to_X - pos_x == 0)
-		direction = PI / 2;
+		direction = to_Y < pos_y ? PI * 1.5 : PI / 2;
 	else
+	{
 		direction = atan((float)(to_Y - pos_y) / (to_X - pos_x));
-	if (to_Y - pos_y < 0 || to_Y - pos_y == 0 && to_X - pos_x < 0)
-		direction += PI;
+		if (to_X < pos_x)
+			direction += PI;
+		if (direction < 0)
+			direction += PI * 2;
+	}
 	return direction;
 }
 
@@ -166,76 +170,11 @@ void CTank::CreateFire()
 
 void CEnemyTank::CalcOri()
 {
-	int step = 4;
-	double offx = to_x - pos_x;
-	double offy = to_y - pos_y;
-	if (abs(offx) < 4)
-	{
-		if (offy > 0)
-		{
-			ImageNo = 18;
-			m_SpeedY = step;
-			m_SpeedX = 0;
-		}
-		else
-		{
-			ImageNo = 6;
-			m_SpeedY = -1 * step;
-			m_SpeedX = 0;
-		}
-		return;
-	}
+	const int step = 4;
+	m_SpeedX = step * cos(direction);
+	m_SpeedY = step * sin(direction);
 
-	if (abs(offy) < 4)
-	{
-		if (offx > 0)
-		{
-			ImageNo = 12;
-			m_SpeedX = step;
-			m_SpeedY = 0;
-		}
-		else
-		{
-			ImageNo = 0;
-			m_SpeedX = -1 * step;
-			m_SpeedY = 0;
-		}
-		return;
-	}
-
-	double tempang = atan(abs(offy / offx));
-
-	m_SpeedX = step * sin(tempang);
-	m_SpeedY = step * cos(tempang);
-
-	tempang = (tempang / ((3.142 / 2) / 90));
-
-	int arc = (int)tempang;
-
-	if ((offx > 0) && (offy < 0))
-	{
-		m_SpeedY *= -1;
-		arc = 180 - arc;
-	}
-	else if ((offx > 0) && (offy > 0))
-	{
-		arc += 180;
-	}
-	else if ((offx < 0) && (offy > 0))
-	{
-		m_SpeedX *= -1;
-		arc = 360 - arc;
-	}
-	else
-	{
-		m_SpeedY *= -1;
-		m_SpeedX *= -1;
-	}
-
-	int temp = arc / 15;
-	if (temp == 24) temp = 0;
-
-	ImageNo = temp;
+	ImageNo = ((int)((direction*180/PI+7.5)/15)+12)%24;
 }
 
 // 攻击坦克
@@ -290,18 +229,15 @@ void CEnemyTank::ResetTank(IplImage *dst)
 bool CEnemyTank::ShootMyTank(void* tank)
 {
 	CMyTank *MyTank = (CMyTank*)tank;
-	int minX = 0, minY = 0, maxX = 0, maxY = 0;
-	for (int i = 0; i < Fires.size(); i++)
+	for (auto f : Fires)
 	{
-		minX = MAX(Fires[i]->pos_x, MyTank->pos_x);
-		minY = MAX(Fires[i]->pos_y, MyTank->pos_y);
-		maxX = MIN(Fires[i]->pos_x + Fires[i]->Image[Fires[i]->ImageNo]->width, MyTank->pos_x + MyTank->Image[MyTank->ImageNo]->width);
-		maxY = MIN(Fires[i]->pos_y + Fires[i]->Image[Fires[i]->ImageNo]->height, MyTank->pos_y + MyTank->Image[MyTank->ImageNo]->height);
-		if (!(minX>maxX || minY > maxY))
+		int px[4] = { f->pos_x,f->pos_x,f->pos_x + f->Image[f->ImageNo]->width,f->pos_x + f->Image[f->ImageNo]->width };
+		int py[4] = { f->pos_y,f->pos_y + f->Image[f->ImageNo]->height,f->pos_y,f->pos_y + f->Image[f->ImageNo]->height };
+		for (int i = 0; i < 4; i++)
 		{
-			delete Fires[i];
-			Fires.erase(Fires.begin() + i);
-			return true;//自己坦克被击中
+			if (px[i] > MyTank->pos_x&&px[i]<MyTank->pos_x + MyTank->Image[MyTank->ImageNo]->width&&
+				py[i]>MyTank->pos_y&&py[i] < MyTank->pos_y + MyTank->Image[MyTank->ImageNo]->height)
+				return true;
 		}
 	}
 	return false;
