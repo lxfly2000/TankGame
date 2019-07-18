@@ -66,12 +66,12 @@ Function .onInit
   ;让我康康你运行的是不是XP啊？
   ${IfNot} ${AtLeastWinVista}
     MessageBox MB_ICONEXCLAMATION "这个程序只能在 Windows Vista 或更新的系统上安装。"
-	Abort
+    Abort
   ${EndIf}
   ;再让我康康你运行的是不是64位啊？
   ${IfNot} ${RunningX64}
     MessageBox MB_ICONEXCLAMATION "这个程序只能在64位系统上安装。"
-	Abort
+    Abort
   ${EndIf}
 FunctionEnd
 
